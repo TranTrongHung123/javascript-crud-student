@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý sinh viên</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="sinh-vien.css">
+</head>
+<body>
+    <header class="page-header">
+        <h1>Quản lý thông tin sinh viên</h1>
+        <p class="header-desc">Nhập, xem và cập nhật danh sách sinh viên</p>
+    </header>
+
+    <div class="form-section">
+        <h2 id="form-title">Thêm sinh viên mới</h2>
+        <form id="student-form">
+            <div class="form-row">
+                <div>
+                    <label for="maSV">Mã sinh viên *</label>
+                    <input type="text" id="maSV" required placeholder="VD: SV001">
+                </div>
+                <div>
+                    <label for="hoTen">Họ và tên *</label>
+                    <input type="text" id="hoTen" required placeholder="Nguyễn Văn A">
+                </div>
+            </div>
+            <div class="form-row">
+                <div>
+                    <label for="ngaySinh">Ngày sinh *</label>
+                    <input type="date" id="ngaySinh" required>
+                </div>
+                <div>
+                    <label for="lopHoc">Lớp học *</label>
+                    <input type="text" id="lopHoc" required placeholder="VD: CNTT01">
+                </div>
+                <div>
+                    <label for="gpa">Điểm GPA *</label>
+                    <input type="number" id="gpa" required min="0" max="4" step="0.01" placeholder="0.00 - 4.00">
+                </div>
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn-primary">Lưu sinh viên</button>
+                <button type="button" class="btn-secondary" id="btn-huy">Hủy</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-section">
+        <h2>Danh sách sinh viên</h2>
+        <div id="table-container">
+            <table id="student-table">
+                <thead>
+                    <tr>
+                        <th>Mã SV</th>
+                        <th>Họ và tên</th>
+                        <th>Ngày sinh</th>
+                        <th>Lớp học</th>
+                        <th>GPA</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="student-tbody">
+                </tbody>
+            </table>
+            <p class="empty-msg" id="empty-msg">Chưa có sinh viên nào. Hãy thêm sinh viên bằng form phía trên.</p>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Lớp Sinh viên với các thuộc tính và phương thức cập nhật
+         */
+        class SinhVien {
+            constructor(maSV, hoTen, ngaySinh, lopHoc, gpa) {
+                this.maSV = maSV;
+                this.hoTen = hoTen;
+                this.ngaySinh = ngaySinh;
+                this.lopHoc = lopHoc;
+                this.gpa = parseFloat(gpa);
+            }
+
+            // Cập nhật toàn bộ thông tin
+            capNhatThongTin(maSV, hoTen, ngaySinh, lopHoc, gpa) {
+                if (maSV !== undefined) this.maSV = maSV;
+                if (hoTen !== undefined) this.hoTen = hoTen;
+                if (ngaySinh !== undefined) this.ngaySinh = ngaySinh;
+                if (lopHoc !== undefined) this.lopHoc = lopHoc;
+                if (gpa !== undefined) this.gpa = parseFloat(gpa);
+            }
+
+            setMaSV(maSV) { this.maSV = maSV; }
+            setHoTen(hoTen) { this.hoTen = hoTen; }
+            setNgaySinh(ngaySinh) { this.ngaySinh = ngaySinh; }
+            setLopHoc(lopHoc) { this.lopHoc = lopHoc; }
+            setGpa(gpa) { this.gpa = parseFloat(gpa); }
+
+            getMaSV() { return this.maSV; }
+            getHoTen() { return this.hoTen; }
+            getNgaySinh() { return this.ngaySinh; }
+            getLopHoc() { return this.lopHoc; }
+            getGpa() { return this.gpa; }
+        }
+
+        // Danh sách sinh viên 
+        let danhSachSinhVien = [];
+        let indexDangSua = -1; // -1: đang thêm mới, >= 0: đang sửa sinh viên tại index
+
+        const form = document.getElementById('student-form');
+        const tbody = document.getElementById('student-tbody');
+        const emptyMsg = document.getElementById('empty-msg');
+        const formTitle = document.getElementById('form-title');
+        const btnHuy = document.getElementById('btn-huy');
+
+        function formatDate(str) {
+            if (!str) return '';
+            const d = new Date(str);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return day + '/' + month + '/' + year;
+        }
+
+        function renderTable() {
+            tbody.innerHTML = '';
+            if (danhSachSinhVien.length === 0) {
+                emptyMsg.style.display = 'block';
+                return;
+            }
+            emptyMsg.style.display = 'none';
+            danhSachSinhVien.forEach((sv, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${sv.maSV}</td>
+                    <td>${sv.hoTen}</td>
+                    <td>${formatDate(sv.ngaySinh)}</td>
+                    <td>${sv.lopHoc}</td>
+                    <td class="gpa">${sv.gpa.toFixed(2)}</td>
+                    <td>
+                        <div class="actions">
+                            <button type="button" class="btn-edit" data-index="${index}">Sửa</button>
+                            <button type="button" class="btn-delete" data-index="${index}">Xóa</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Gắn sự kiện Sửa và Xóa
+            tbody.querySelectorAll('.btn-edit').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const i = parseInt(this.getAttribute('data-index'), 10);
+                    moFormSua(i);
+                });
+            });
+            tbody.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const i = parseInt(this.getAttribute('data-index'), 10);
+                    if (confirm('Bạn có chắc muốn xóa sinh viên này?')) {
+                        danhSachSinhVien.splice(i, 1);
+                        if (indexDangSua === i) resetForm();
+                        else if (indexDangSua > i) indexDangSua--;
+                        renderTable();
+                    }
+                });
+            });
+        }
+
+        function moFormSua(index) {
+            indexDangSua = index;
+            const sv = danhSachSinhVien[index];
+            document.getElementById('maSV').value = sv.maSV;
+            document.getElementById('hoTen').value = sv.hoTen;
+            document.getElementById('ngaySinh').value = sv.ngaySinh;
+            document.getElementById('lopHoc').value = sv.lopHoc;
+            document.getElementById('gpa').value = sv.gpa;
+            formTitle.textContent = 'Cập nhật thông tin sinh viên';
+        }
+
+        function resetForm() {
+            indexDangSua = -1;
+            form.reset();
+            formTitle.textContent = 'Thêm sinh viên mới';
+        }
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const maSV = document.getElementById('maSV').value.trim();
+            const hoTen = document.getElementById('hoTen').value.trim();
+            const ngaySinh = document.getElementById('ngaySinh').value;
+            const lopHoc = document.getElementById('lopHoc').value.trim();
+            const gpa = document.getElementById('gpa').value;
+
+            if (indexDangSua >= 0) {
+                // Cập nhật sinh viên hiện có bằng phương thức của đối tượng
+                const sv = danhSachSinhVien[indexDangSua];
+                sv.capNhatThongTin(maSV, hoTen, ngaySinh, lopHoc, gpa);
+                resetForm();
+            } else {
+                // Kiểm tra trùng mã SV khi thêm mới
+                if (danhSachSinhVien.some(s => s.maSV === maSV)) {
+                    alert('Mã sinh viên đã tồn tại. Vui lòng nhập mã khác.');
+                    return;
+                }
+                const sv = new SinhVien(maSV, hoTen, ngaySinh, lopHoc, gpa);
+                danhSachSinhVien.push(sv);
+                form.reset();
+            }
+            renderTable();
+        });
+
+        btnHuy.addEventListener('click', function() {
+            resetForm();
+        });
+
+        renderTable();
+    </script>
+</body>
+</html>
